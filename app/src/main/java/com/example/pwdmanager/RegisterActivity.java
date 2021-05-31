@@ -3,7 +3,6 @@ package com.example.pwdmanager;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
-import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -20,7 +19,6 @@ import com.android.volley.toolbox.Volley;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.mindrot.jbcrypt.BCrypt;
 
 import java.io.IOException;
 import java.security.KeyManagementException;
@@ -28,12 +26,9 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
@@ -42,6 +37,7 @@ public class RegisterActivity extends AppCompatActivity {
     TextView textView;
     Button registerButton;
     SSLSocketFactory sslSocketFactory;
+//    final static String myDomainIp = "https://3.125.38.36";
     final static String myDomainIp = "https://192.168.13.14";
     final static String myDomainPort = "8443";
     EditText etName;
@@ -130,7 +126,7 @@ public class RegisterActivity extends AppCompatActivity {
             isAnyError = true;
         }
 
-        if(password.length() < 8)
+        if(password.length() < 2)
         {
             etPwd.setError("Password must be at least 8 chars!");
             isAnyError = true;
@@ -157,8 +153,12 @@ public class RegisterActivity extends AppCompatActivity {
         HttpsURLConnection.setDefaultSSLSocketFactory(sslSocketFactory);
 
         RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
-        String url = myDomainIp + ":" + myDomainPort + "/register";
-        String hashedPassword = hashPassword();
+        String url = getString(R.string.app_url_local) + "/register";
+//        url = myDomainIp + ":" + myDomainPort + "/register";
+
+        String sha = CryptoFunctions.shaPassword(password);
+        Log.d("pwddbg", "SHA REGISTER: " + sha);
+        String hashedPassword = CryptoFunctions.bcryptPassword(sha);
 
         Map<String, String> params = new HashMap<String, String>();
         params.put("firstName", name);
@@ -180,29 +180,17 @@ public class RegisterActivity extends AppCompatActivity {
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
+                Log.e("pwddbg", "Huston, we have a problem!");
+                error.printStackTrace();
                 NetworkResponse networkResponse = error.networkResponse;
                 if (networkResponse != null && networkResponse.data != null) {
                     String jsonError = new String(networkResponse.data);
-                    Log.e("pwderr", jsonError);
+                    Log.e("pwddbg", jsonError);
                 }
             }
         });
         queue.add(req);
 
-    }
-
-//    private String hashPassword() throws NoSuchAlgorithmException, InvalidKeySpecException {
-//        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), "MySecret".getBytes(), 256, 256);
-//        SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-//        byte[] derivative = skf.generateSecret(spec).getEncoded();
-//        spec.clearPassword();
-//        String hashedPassword = Base64.encodeToString(derivative, Base64.DEFAULT);
-//        return hashedPassword;
-//    }
-
-    private String hashPassword()
-    {
-        return BCrypt.hashpw(password, BCrypt.gensalt());
     }
 
     private void clearFields()
