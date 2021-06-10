@@ -9,7 +9,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Toast;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.NetworkResponse;
@@ -18,7 +17,6 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONArray;
@@ -76,12 +74,9 @@ public class LoginActivity extends AppCompatActivity {
             public void onClick(View v) {
                 email = etEmail.getText().toString();
                 password = etPassword.getText().toString();
-                String masterKey = CryptoFunctions.deriveMasterKey(email, password);
                 try {
                     loginUser();
-                } catch (InvalidKeySpecException e) {
-                    e.printStackTrace();
-                } catch (NoSuchAlgorithmException e) {
+                } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
                     e.printStackTrace();
                 }
             }
@@ -115,7 +110,13 @@ public class LoginActivity extends AppCompatActivity {
                     }
                 }
 
-                startDisplayActivity();
+                try {
+                    startDisplayActivity(response);
+                } catch (InvalidKeySpecException e) {
+                    e.printStackTrace();
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                }
 
             }
             }, new Response.ErrorListener() {
@@ -153,9 +154,13 @@ public class LoginActivity extends AppCompatActivity {
 
     }
 
-    private void startDisplayActivity()
-    {
-        Intent intent = new Intent(getApplicationContext(), DisplayActivity.class);
+    private void startDisplayActivity(JSONArray response) throws InvalidKeySpecException, NoSuchAlgorithmException {
+        byte[] masterKey = CryptoFunctions.deriveMasterKey(email, password);
+        Intent intent = new Intent(getApplicationContext(), PasswordsActivity.class);
+        intent.putExtra("masterKey", masterKey);
+        intent.putExtra("jsonArray", response.toString());
+        intent.putExtra("email", email);
+        intent.putExtra("hash", CryptoFunctions.shaPassword(password));
         startActivity(intent);
     }
 }
